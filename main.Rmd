@@ -1,0 +1,129 @@
+---
+title: "Tractats de Pau i Gènere"
+author: "Jaume Amorós"
+date: "20 de noviembre de 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo = FALSE}
+knitr::opts_chunk$set(
+	message = FALSE,
+	warning = FALSE,
+	include = TRUE,
+	render = "UTF-8",
+	fig.cap = FALSE
+)
+
+require(dplyr)
+require(ggplot2)
+require(lubridate)
+```
+
+## Descripció
+
+Aquest document presenta un enfocament per fer una presentació de les dades de Tractats de Pau per mitja de representacions gràfiques. Es treballa amb dades del repositori peaceagreements.org[www.peaceagreements.org], generat i mantingut per l'equip de Law School de la University of Edinburgh.
+
+Es un docuemnt generat amb un MarkDown que inclou chunks de codi d'R que permet fer l'exploració, depuració i analisi (visualització) de les dades).
+
+En aquest document s'ha optat per avaluar els acords de pau en clau de gènere. Per a fer-ho inclourem les variables relatives a gènere en el conjutn de dades que treballarem. La variable principal es GeWom que indica si en el tractat de Pau signat s'inclou alguna referencia explicita a les dones o al gènere.
+
+```{r Import data}
+# Seleccionem el fitxer
+fitxer <- "pax_data_1789_agreements_19-11-19.csv"
+
+# Importem tot el conjunt de dades
+data_brut <- read.table(fitxer, sep = ',', quote = '"', header = TRUE, stringsAsFactors = FALSE)
+dim(data_brut)
+
+```
+
+## Presentació de les dades
+
+En el conjunt de dades total podem veure que hi ha 1789 registres i 266 columnes. Cada columna correspon a una variable a analitzar i cada registre a un tractat de Pau. En el conjunt de dades hi ha moltes variables que per l'objectiu d'aquest exercici no ens interessen. Ens quedarem únicament amb les dades geografiques, la data i les variables relaconades amb el gènere. Les variables de gènere estan codificades de manera que les dues priemres lletres sempre son "Ge".
+
+```{r}
+# Seleccionem la regió, la data i les variables de Gènere
+genderVar <- grep("Ge", colnames(data_brut), value = TRUE)
+columnes  <- c("ï..Con", "Reg", "Dat", genderVar)
+data      <- data_brut[, columnes]
+dim(data)
+```
+
+En el nou conjunt de dades tenim els mateixos registres però ens hem quedat únicament amb 19 variables.
+
+A continuació transformarem la data en format de data i n'extraurem l'any:
+
+```{r}
+# Transformem la data en format data i extraiem l'any en una variable nova
+data$Dat  <- as.Date(data$Dat)
+data$Year <- year(data$Dat)
+```
+
+## Exploració de les dades
+
+```{r}
+# Transformem la data en format data i extraiem l'any en una variable nova
+ggplot(data) + 
+  geom_bar(aes(Year), fill = "darkseagreen4")
+
+ggplot(data) + 
+  geom_bar(aes(Reg), fill = "darkseagreen4")
+
+```
+
+Podem veure que en la segona meitat del periode de dades analitzat el nombre de tractats de pau signats es inferior.
+La majoria de conflictes es concentren a Africa. El nombre de conflictes a Europa i Asia també es considerable. 
+
+```{r}
+# Creem un conjunt de dades per regió que ens indiqui la proporció de tractats que inclouen la paraula dona
+d_RegGeWom <- data %>%
+  group_by(Reg) %>%
+  summarise(GeWom = mean(GeWom),
+            GeSo = mean(GeSo),
+            Count = n()) %>%
+  ungroup()
+
+ggplot(d_RegGeWom, aes(x = Reg)) +
+  geom_col(aes(y = GeWom), fill = "dodgerblue") +
+  scale_y_continuous(labels=scales::percent) +
+  labs(title = "Proporció de tractats que inclouen Gènere Dona",
+       x = "Regió", y = "")
+
+ggplot(d_RegGeWom, aes(x = Reg)) +
+  geom_col(aes(y = GeSo), fill = "dodgerblue") +
+  scale_y_continuous(labels=scales::percent) +
+  labs(title = "Proporció de tractats que inclouen l'orinetació sexual",
+       x = "Regió", y = "")
+```
+
+El percentatge de tractats que inclouen explicitament conceptes de dòna i gènere es considerable. A Africa son vora el 30%. A Europa no es menciona massa les dones explicitament en els tractats.
+
+La orientació sexual no apareix pràcticament a cap tractat.
+
+
+
+```{r}
+# Creem un conjunt de dades temporals que ens indiqui la proporció de tractats que inclouen la paraula dona
+d_YeargGeWom <- data %>%
+  group_by(Year) %>%
+  summarise(GeWom = mean(GeWom),
+            GeSo = mean(GeSo),
+            Count = n()) %>%
+  ungroup()
+
+ggplot(d_YeargGeWom, aes(x = Year)) +
+  geom_col(aes(y = GeWom), fill = "darkseagreen3") +
+  scale_y_continuous(labels=scales::percent) +
+  labs(title = "Proporció de tractats que inclouen Gènere Dona",
+       x = "Any", y = "")
+
+ggplot(d_YeargGeWom, aes(x = Year)) +
+  geom_col(aes(y = GeSo), fill = "darkseagreen3") +
+  scale_y_continuous(labels=scales::percent) +
+  labs(title = "Proporció de tractats que inclouen l'orinetació sexual",
+       x = "Any", y = "")
+
+```
+
+En l'evolució temporal, també podem veure com cada cop és més freqüent les referencies directes al Gènere en els tractats de Pau.
+També sembla que les referencies a orientació sexual tendeixen a ser més recents. Però son tan poques que seria dificil fer-ne un analisi.
